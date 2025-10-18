@@ -1,0 +1,89 @@
+services:
+  # Portainer - Docker Management GUI
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./portainer/data:/data
+    ports:
+      - "{{ portainer_port }}:9000"
+    networks:
+      - blackoil-network
+    environment:
+      - TZ=Europe/Berlin
+  
+  postgres:
+    image: postgres:18.0
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ai_stack
+      POSTGRES_USER: ai_user
+      POSTGRES_PASSWORD: ai_password_123
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - ./postgres/data:/var/lib/postgresql/data
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "{{ postgres_port }}:5432"
+    networks:
+      - blackoil-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ai_user -d ai_stack"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+   # pgAdmin - PostgreSQL Management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@blackoil.local
+      PGADMIN_DEFAULT_PASSWORD: pgadmin_123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    volumes:
+      - ./pgadmin/data:/var/lib/pgadmin
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "{{ pgadmin_port }}:80"
+    networks:
+      - blackoil-network
+    depends_on:
+      - postgres
+
+  # TypeMill - File-based CMS with SQLite
+  typemill:
+    image: kixote/typemill
+    container_name: typemill
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./typemill/settings/:/var/www/html/settings/
+      - ./typemill/settings/users/:/var/www/html/settings/users/
+      - ./typemill/media/:/var/www/html/media/
+      - ./typemill/data/:/var/www/html/data/
+      - ./typemill/cache/:/var/www/html/cache/
+      - ./typemill/plugins/:/var/www/html/plugins/
+      - ./typemill/content/:/var/www/html/content/
+      - ./typemill/themes/:/var/www/html/themes/
+    ports:
+      - "{{ typemill_port }}:80"
+    networks:
+      - blackoil-network
+    environment:
+      - TZ=Europe/Berlin
+      - APACHE_RUN_USER=www-data
+      - APACHE_RUN_GROUP=www-data
+
+networks:
+  blackoil-network:
+    driver: bridge

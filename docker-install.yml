@@ -1,0 +1,122 @@
+---
+- name:  install and configute Docker
+  hosts: all
+  become: yes
+  
+  vars:
+    project_dir: "/opt/blackoil-stack"
+    portainer_port: 9000
+    postgres_port: 5432
+    typemill_port: 8080
+    pgadmin_port: 8081
+
+  tasks:
+    - name: Fix interrupted dpkg operations
+      become: yes
+      command: dpkg --configure -a
+      changed_when: false
+      ignore_errors: true
+    - name: install required packages
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+          - software-properties-common
+          - python3-pip
+          - virtualenv
+          - python3-setuptools
+        state: present
+        update_cache: yes
+
+    - name: add Docker GPG Key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: ass Docker repository hinzu
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+
+    - name: install Docker packages
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: present
+        update_cache: yes
+
+    - name: start and enable Docker service
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: add user to docker group (optional)
+      user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: yes
+
+    - name: Create project directory
+      file:
+        path: "{{ project_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create subdirectories
+      file:
+        path: "{{ project_dir }}/{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "portainer/data"
+        - "typemill/data"
+        - "postgres/data"
+        - "pgadmin/data"
+
+    - name: Deploy Docker Compose file
+      template:
+        src: docker-compose.yml.j2
+        dest: "{{ project_dir }}/docker-compose.yml"
+        mode: '0644'
+
+    - name: Ensure Docker Compose is installed
+      package:
+        name: docker-compose-plugin
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Pull Docker images
+      community.docker.docker_compose_v2:
+        project_src: "{{ project_dir }}"
+        pull: missing
+
+    - name: Start BlackOil stack
+      community.docker.docker_compose_v2:
+        project_src: "{{ project_dir }}"
+        state: present
+
+    - name: Wait for services to start
+      wait_for:
+        port: "{{ item }}"
+        host: "{{ ansible_default_ipv4.address }}"
+        delay: 10
+        timeout: 60
+      loop:
+        - "{{ portainer_port }}"
+        - "{{ typemill_port }}"
+        - "{{ pgadmin_port }}"
+
+    - name: Show access information
+      debug:
+        msg:
+          - "BlackOil Stack successfully deployed!"
+          - "Portainer: http://{{ ansible_default_ipv4.address }}:{{ portainer_port }}"
+          - "TypeMill: http://{{ ansible_default_ipv4.address }}:{{ typemill_port }}"
+          - "PGAdmin: http://{{ ansible_default_ipv4.address }}:{{ pgadmin_port }}"
+          - "Data directory: {{ project_dir }}"
