@@ -73,6 +73,8 @@
         path: "{{ project_dir }}/{{ item }}"
         state: directory
         mode: '0755'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
       loop:
         - "portainer/data"
         - "typemill/data"

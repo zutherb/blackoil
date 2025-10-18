@@ -18,7 +18,7 @@ services:
       - TZ=Europe/Berlin
   
   postgres:
-    image: postgres:18.0
+    image: postgres:15-alpine
     container_name: postgres
     restart: unless-stopped
     environment:
@@ -27,8 +27,8 @@ services:
       POSTGRES_PASSWORD: ai_password_123
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
-      - ./postgres/data:/var/lib/postgresql/data
-      - /etc/localtime:/etc/localtime:ro
+    - /etc/localtime:/etc/localtime:ro
+    - ./postgres/data:/var/lib/postgresql/data
     ports:
       - "{{ postgres_port }}:5432"
     networks:
@@ -45,12 +45,12 @@ services:
     container_name: pgadmin
     restart: unless-stopped
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@blackoil.local
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
       PGADMIN_DEFAULT_PASSWORD: pgadmin_123
       PGADMIN_CONFIG_SERVER_MODE: 'False'
-    volumes:
-      - ./pgadmin/data:/var/lib/pgadmin
-      - /etc/localtime:/etc/localtime:ro
+    #volumes:
+    #  - ./pgadmin/data:/var/lib/pgadmin
+    #  - /etc/localtime:/etc/localtime:ro
     ports:
       - "{{ pgadmin_port }}:80"
     networks:
