@@ -5,10 +5,15 @@
   
   vars:
     project_dir: "/opt/blackoil-stack"
+    grafana_port: 3000
+    webui_port: 3001
     portainer_port: 9000
+    prometheus_port: 9090
+    node_exporter_port: 9100
     postgres_port: 5432
     typemill_port: 8080
     pgadmin_port: 8081
+    ollama_port: 11435
 
   tasks:
     - name: Fix interrupted dpkg operations
@@ -16,6 +21,7 @@
       command: dpkg --configure -a
       changed_when: false
       ignore_errors: true
+
     - name: install required packages
       apt:
         name:
@@ -62,6 +68,27 @@
         groups: docker
         append: yes
 
+    - name: Add NVIDIA repository key
+      apt_key:
+        url: https://nvidia.github.io/libnvidia-container/gpgkey
+        keyring: /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+
+    - name: Add NVIDIA repository
+      apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://nvidia.github.io/libnvidia-container/stable/deb/$(ARCH) /"
+        state: present
+
+    - name: Install nvidia-container-toolkit
+      apt:
+        name: nvidia-container-toolkit
+        state: present
+        update_cache: yes
+
+    - name: Restart Docker
+      systemd:
+        name: docker
+        state: restarted
+
     - name: Create project directory
       file:
         path: "{{ project_dir }}"
@@ -81,6 +108,8 @@
         - "postgres/data"
         - "pgadmin/data"
         - "prometheus/data"
+        - "ollama/data"
+        - "webui/data"
         - "grafana/provisioning/datasources/"
 
     - name: Deploy Docker Compose file
@@ -110,7 +139,7 @@
     - name: Pull Docker images
       community.docker.docker_compose_v2:
         project_src: "{{ project_dir }}"
-        pull: missing
+        pull: always
 
     - name: Start BlackOil stack
       community.docker.docker_compose_v2:
@@ -127,6 +156,8 @@
         - "{{ portainer_port }}"
         - "{{ typemill_port }}"
         - "{{ pgadmin_port }}"
+        - "{{ node_exporter_port }}"
+        - "{{ prometheus_port }}"
 
     - name: Show access information
       debug:
@@ -135,4 +166,7 @@
           - "Portainer: http://{{ ansible_default_ipv4.address }}:{{ portainer_port }}"
           - "TypeMill: http://{{ ansible_default_ipv4.address }}:{{ typemill_port }}"
           - "PGAdmin: http://{{ ansible_default_ipv4.address }}:{{ pgadmin_port }}"
+          - "Node Exporter: http://{{ ansible_default_ipv4.address }}:{{ node_exporter_port }}"
+          - "Prometheus: http://{{ ansible_default_ipv4.address }}:{{ prometheus_port }}"
+          - "Grafana: http://{{ ansible_default_ipv4.address }}:{{ grafana_port }}"
           - "Data directory: {{ project_dir }}"
