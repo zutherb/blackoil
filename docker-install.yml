@@ -116,6 +116,7 @@
         - "prometheus/data"
         - "ollama/data"
         - "webui/data"
+        - "webui/presets"
         - "grafana/provisioning/datasources/"
 
     - name: Deploy Docker Compose file
@@ -134,6 +135,12 @@
       template:
         src: datasource.yml.j2
         dest: "{{ project_dir }}/grafana/provisioning/datasources/datasource.yml"
+        mode: '0644'
+    
+    - name: Deploy Brave search preset file for open webui
+      template:
+        src: presets.json.j2
+        dest: "{{ project_dir }}/webui/presets/presets.json"
         mode: '0644'
     
     - name: Ensure Docker Compose is installed

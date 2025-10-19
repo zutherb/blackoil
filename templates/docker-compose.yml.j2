@@ -177,8 +177,13 @@ services:
       - "{{ webui_port }}:8080"
     volumes:
       - ./webui/data:/app/backend/data
+      - ./webui/presets:/app/presets 
     environment:
       - "OLLAMA_BASE_URL=http://ollama:11434"
+      - "OLLAMA_DEFAULT_MODEL=gpt-oss:20b"
+      - "JUPYTER_URL=http://jupyter:8888"
+      - "JUPYTER_TOKEN={{ jupyter_token | default('default_password') }}"
+      - "BRAVE_SEARCH_URL=https://search.brave.com/search?q=%s"
     depends_on:
       - ollama
     networks:
