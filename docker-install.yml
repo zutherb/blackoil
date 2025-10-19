@@ -15,8 +15,10 @@
     postgres_port: 5432
     typemill_port: 8080
     pgadmin_port: 8081
+    comfyui_port: 8188
     jupyter_port: 8888
     ollama_port: 11435
+    comfyui_api_key: "{{ lookup('env','COMFYUI_API_KEY') | default(default_password) }}"
     flowise_api_key: "{{ lookup('env','FLOWISE_API_KEY') | default(default_password) }}"
     n8n_user: n8n
     n8n_password: "{{ lookup('env','N8N_PASSWORD') | default(default_password) }}"
@@ -124,7 +126,16 @@
         - "webui/presets"
         - "grafana/provisioning/datasources/"
         - "flowise/data"
-        - "n8n/data"   
+        - "n8n/data"
+        - "comfyui/data"
+
+    - name: Ensure prometheus data directory has correct ownership
+      file:
+        path: "{{ project_dir }}/prometheus/data"
+        state: directory
+        owner: 65534
+        group: 65534
+        mode: '0755'    
 
     - name: Deploy Docker Compose file
       template:
@@ -156,6 +167,41 @@
         state: present
       when: ansible_os_family == "Debian"
 
+    - name: Check for ufw binary
+      stat:
+        path: /usr/sbin/ufw
+      register: ufw_bin
+
+    - name: Check for firewalld binary
+      stat:
+        path: /usr/bin/firewall-cmd
+      register: firewalld_bin
+
+    - name: Ensure port 9100 open in UFW (if present)
+      become: true
+      shell: |
+        # only add if not present
+        ufw status numbered | grep -q '9100' || ufw allow 9100/tcp
+      when: ufw_bin.stat.exists
+      changed_when: false
+
+    - name: Ensure port 9100 open in firewalld (if present)
+      become: true
+      shell: |
+        firewall-cmd --permanent --list-ports | grep -qw '9100/tcp' || (firewall-cmd --permanent --add-port=9100/tcp && firewall-cmd --reload)
+      when: firewalld_bin.stat.exists
+      changed_when: false
+
+    - name: Ensure iptables rule exists for 9100 (fallback)
+      ansible.builtin.iptables:
+        chain: INPUT
+        protocol: tcp
+        destination_port: 9100
+        jump: ACCEPT
+        state: present
+      become: true
+      when: not ufw_bin.stat.exists and not firewalld_bin.stat.exists
+
     - name: Pull Docker images
       community.docker.docker_compose_v2:
         project_src: "{{ project_dir }}"
@@ -176,8 +222,8 @@
         - "{{ portainer_port }}"
         - "{{ typemill_port }}"
         - "{{ pgadmin_port }}"
-        - "{{ node_exporter_port }}"
-        - "{{ prometheus_port }}"
+        #- "{{ node_exporter_port }}"
+        #- "{{ prometheus_port }}"
         - "{{ grafana_port }}"
         - "{{ postgres_port }}"
         - "{{ ollama_port }}"
@@ -185,7 +231,8 @@
         - "{{ jupyter_port }}"
         - "{{ flowise_port }}"
         - "{{ n8n_port }}"  
-
+        - "{{ comfyui_port }}"
+        
     - name: Show access information
       debug:
         msg:
@@ -203,6 +250,7 @@
           - "Jupyter: http://{{ ansible_default_ipv4.address }}:{{ jupyter_port }}"
           - "Flowise: http://{{ ansible_default_ipv4.address }}:{{ flowise_port }} (api key via flowise_api_key)"
           - "n8n: http://{{ ansible_default_ipv4.address }}:{{ n8n_port }} (basic auth user: {{ n8n_user }})"
+          - "ComfyUI: http://{{ ansible_default_ipv4.address }}:{{ comfyui_port }} (api key via comfyui_api_key)"
           - ""
           - "Default password: {{ default_password }}"
           - ""

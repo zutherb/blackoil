@@ -1,5 +1,4 @@
 services:
-  # Portainer - Docker Management GUI
   portainer:
     image: portainer/portainer-ce:latest
     container_name: portainer
@@ -119,7 +118,6 @@ services:
     depends_on:
       - postgres
 
-  # TypeMill - File-based CMS with SQLite
   typemill:
     image: kixote/typemill
     container_name: typemill
@@ -187,6 +185,29 @@ services:
       - "BRAVE_SEARCH_URL=https://search.brave.com/search?q=%s"
     depends_on:
       - ollama
+    networks:
+      - blackoil-network
+  
+  comfyui:
+    image: mmartial/comfyui-nvidia-docker:latest
+    container_name: comfyui
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all  
+              capabilities: [gpu] 
+    ports:
+      - "{{ comfyui_port }}:8188"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./comfyui/data:/comfyui
+    environment:
+      - "COMFYUI_API_KEY={{ comfyui_api_key | default(default_password) }}"
+      - "NVIDIA_VISIBLE_DEVICES=all"
+      - "NVIDIA_DRIVER_CAPABILITIES=compute,utility"
     networks:
       - blackoil-network
 
