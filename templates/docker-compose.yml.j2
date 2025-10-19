@@ -185,6 +185,32 @@ services:
       - blackoil-network
 
 
+  jupyter:
+    image: jupyter/base-notebook:latest
+    container_name: jupyter
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all  
+              capabilities: [gpu]  
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "{{ jupyter_port }}:8888"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./jupyter/work:/home/jovyan/work
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+      - JUPYTER_TOKEN={{ jupyter_token | default('changeme') }}
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    networks:
+      - blackoil-network
+
 networks:
   blackoil-network:
     driver: bridge

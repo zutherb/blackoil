@@ -13,9 +13,15 @@
     postgres_port: 5432
     typemill_port: 8080
     pgadmin_port: 8081
+    jupyter_port: 8888
     ollama_port: 11435
+    default_password: "{{ lookup('pipe','uuidgen') }}"
 
   tasks:
+    - name: Show generated default password
+      debug:
+        msg: "Default password: {{ default_password }}"
+
     - name: Fix interrupted dpkg operations
       become: yes
       command: dpkg --configure -a
@@ -158,6 +164,11 @@
         - "{{ pgadmin_port }}"
         - "{{ node_exporter_port }}"
         - "{{ prometheus_port }}"
+        - "{{ grafana_port }}"
+        - "{{ postgres_port }}"
+        - "{{ ollama_port }}"
+        - "{{ webui_port }}"
+        - "{{ jupyter_port }}"
 
     - name: Show access information
       debug:
@@ -170,3 +181,10 @@
           - "Prometheus: http://{{ ansible_default_ipv4.address }}:{{ prometheus_port }}"
           - "Grafana: http://{{ ansible_default_ipv4.address }}:{{ grafana_port }}"
           - "Data directory: {{ project_dir }}"
+          - "PostgreSQL: http://{{ ansible_default_ipv4.address }}:{{ postgres_port }}"
+          - "Ollama: http://{{ ansible_default_ipv4.address }}:{{ ollama_port }}"
+          - "WebUI: http://{{ ansible_default_ipv4.address }}:{{ webui_port }}"
+          - "Jupyter: http://{{ ansible_default_ipv4.address }}:{{ jupyter_port }}"
+          - ""
+          - "Default password: {{ default_password }}"
+          - ""
