@@ -32,11 +32,14 @@ docker compose -f /opt/blackoil-stack/docker-compose.yml up -d
 - Open-WebUI (local LLM frontend)
 - Ollama (local LLM runtime)
 - JupyterLab (notebook server)
+- Flowise (visual LLM workflow builder)
+- n8n (workflow automation)
 - Optional NVIDIA GPU support for compatible hosts
 
 ### Notable additions (updated)
 - JupyterLab with optional GPU support (NVIDIA variables wired; device_requests removed for broad compose compatibility).
 - Open-WebUI presets: bundled presets to auto-configure Ollama and Jupyter endpoints.
+- Flowise and n8n services added, with persistence directories and simple auth defaults.
 - Brave Search provider preset for Open-WebUI (mountable presets file).
 - Auto-generated default password (UUID) available as ansible var `default_password`.
 - Daily SMB sync cron example to back up the project directory.
@@ -44,19 +47,35 @@ docker compose -f /opt/blackoil-stack/docker-compose.yml up -d
 
 ## ⚙️ Quick config pointers
 
+- Ports & access (defaults)
+- Portainer: {{ portainer_port }} (compose var)
+- Grafana: {{ grafana_port }}
+- WebUI: {{ webui_port }}
+- Ollama: {{ ollama_port }}
+- Jupyter: {{ jupyter_port }} (token via `jupyter_token` or `default_password`)
+- Flowise: {{ flowise_port }} (API key via `flowise_api_key` / defaults to `default_password`)   # added
+- n8n: {{ n8n_port }} (basic auth: user `{{ n8n_user }}`, password `n8n_password` / defaults to `default_password`)  # added
+
+- Flowise
+  - Data dir: ./flowise/data (persisted)
+  - Configure `FLOWISE_API_KEY` in the playbook or export `FLOWISE_API_KEY` to use a custom key.
+  - If using external vector DBs or embeddings, add the required services and env vars per Flowise docs.
+
+- n8n
+  - Data dir: ./n8n/data (persisted)
+  - Basic auth is enabled by default (`N8N_BASIC_AUTH_ACTIVE=true`). Use `n8n_user` and `n8n_password` in the playbook (or override via env).
+  - For production use, configure Postgres and Redis persistence per n8n docs.
+
+
 - Jupyter
   - Exposed on port configured by `jupyter_port` (default 8888).
   - Token set via `jupyter_token` or falls back to `default_password`.
   - GPU: the compose template sets NVIDIA env vars; if your host supports Compose device_requests you may enable GPU allocation — otherwise use the nvidia runtime.
 
-- Open-WebUI
-  - Presets are mounted from `./webui/presets/presets.json`.
-  - Env vars set in compose: `OLLAMA_BASE_URL`, `OLLAMA_DEFAULT_MODEL`, `JUPYTER_URL`, `JUPYTER_TOKEN`, and `BRAVE_SEARCH_URL`.
-  - If your Open-WebUI image requires a different schema for presets, adapt `webui/presets/presets.json`.
+- Open-WebUI presets & Brave Search
+  - Presets are provided in ./webui/presets/presets.json and mounted into the container.
+  - Brave Search query URL: `https://search.brave.com/search?q=%s` (preset included).
 
-- Brave Search preset
-  - Query URL: `https://search.brave.com/search?q=%s`
-  - Add to `webui/presets/presets.json` to expose Brave as a search provider inside the UI.
 
 ## 🔐 Passwords & secrets
 - `default_password` is generated in the playbook with `lookup('pipe','uuidgen')`.

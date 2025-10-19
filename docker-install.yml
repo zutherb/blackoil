@@ -7,6 +7,8 @@
     project_dir: "/opt/blackoil-stack"
     grafana_port: 3000
     webui_port: 3001
+    flowise_port: 3002
+    n8n_port: 5678
     portainer_port: 9000
     prometheus_port: 9090
     node_exporter_port: 9100
@@ -15,6 +17,9 @@
     pgadmin_port: 8081
     jupyter_port: 8888
     ollama_port: 11435
+    flowise_api_key: "{{ lookup('env','FLOWISE_API_KEY') | default(default_password) }}"
+    n8n_user: n8n
+    n8n_password: "{{ lookup('env','N8N_PASSWORD') | default(default_password) }}"
     default_password: "{{ lookup('pipe','uuidgen') }}"
 
   tasks:
@@ -118,6 +123,8 @@
         - "webui/data"
         - "webui/presets"
         - "grafana/provisioning/datasources/"
+        - "flowise/data"
+        - "n8n/data"   
 
     - name: Deploy Docker Compose file
       template:
@@ -176,6 +183,8 @@
         - "{{ ollama_port }}"
         - "{{ webui_port }}"
         - "{{ jupyter_port }}"
+        - "{{ flowise_port }}"
+        - "{{ n8n_port }}"  
 
     - name: Show access information
       debug:
@@ -192,6 +201,8 @@
           - "Ollama: http://{{ ansible_default_ipv4.address }}:{{ ollama_port }}"
           - "WebUI: http://{{ ansible_default_ipv4.address }}:{{ webui_port }}"
           - "Jupyter: http://{{ ansible_default_ipv4.address }}:{{ jupyter_port }}"
+          - "Flowise: http://{{ ansible_default_ipv4.address }}:{{ flowise_port }} (api key via flowise_api_key)"
+          - "n8n: http://{{ ansible_default_ipv4.address }}:{{ n8n_port }} (basic auth user: {{ n8n_user }})"
           - ""
           - "Default password: {{ default_password }}"
           - ""
