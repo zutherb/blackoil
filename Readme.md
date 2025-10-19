@@ -4,7 +4,7 @@
 
 **A mysterious AI homelab stack inspired by the iconic black oil from The X-Files - your gateway to experimenting with artificial intelligence.**
 
-![Project BlackOil Logo](media/logo.png)
+![Project BlackOil Logo](media/logo_white.png)
 
 ---
 
